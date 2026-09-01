@@ -1,0 +1,32 @@
+services:
+  migrate:
+    build: .
+    entrypoint: ["/usr/local/bin/migrate"]
+    command: ["up"]
+    environment:
+      DATABASE_PATH: /data/personal.db
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    volumes:
+      - personal-data:/data
+
+  api:
+    build: .
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/personal.db
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:${HOST_PORT:-49173}:8080"
+    volumes:
+      - personal-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  personal-data:

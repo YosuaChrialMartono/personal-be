@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+      - name: Generate sqlc code
+        run: go tool sqlc generate
+      - name: Check generated code
+        run: git diff --exit-code -- internal/store
+      - name: Format
+        run: test -z "$(gofmt -l cmd internal queries)"
+      - name: Test
+        run: go test ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Build image
+        run: docker build .

@@ -1,0 +1,6 @@
+.codegraph/codegraph.db
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
