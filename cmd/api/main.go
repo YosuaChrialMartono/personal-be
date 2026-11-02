@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +34,10 @@ func run(logger *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	auth, err := httpapi.NewAuth(ctx, os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET"), os.Getenv("OWNER_EMAIL"), os.Getenv("PUBLIC_ORIGIN"))
+	if err != nil {
+		return err
+	}
 	db, err := database.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		return err
@@ -41,8 +46,8 @@ func run(logger *slog.Logger) error {
 
 	repository := wishlist.NewSQLiteRepository(db)
 	server := &http.Server{
-		Addr:              fmt.Sprintf(":%d", cfg.Port),
-		Handler:           httpapi.NewRouter(db, wishlist.NewService(repository), logger, cfg.AllowedOrigins),
+		Addr:              net.JoinHostPort(os.Getenv("LISTEN_HOST"), fmt.Sprint(cfg.Port)),
+		Handler:           httpapi.NewRouter(db, wishlist.NewService(repository), logger, cfg.AllowedOrigins, auth),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

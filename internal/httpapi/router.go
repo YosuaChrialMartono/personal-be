@@ -12,19 +12,26 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(db *sql.DB, service *wishlist.Service, logger *slog.Logger, allowedOrigins []string) http.Handler {
+func NewRouter(db *sql.DB, service *wishlist.Service, logger *slog.Logger, allowedOrigins []string, auth *Auth) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(loggingMiddleware(logger))
 	router.Use(recoveryMiddleware(logger))
 	router.Use(corsMiddleware(allowedOrigins))
 	router.Get("/healthz", healthHandler(db))
+	router.Get("/auth/login", auth.start)
+	router.Get("/auth/callback", auth.callback)
+	router.Get("/auth/session", auth.session)
+	router.Post("/auth/logout", auth.logout)
 	handler := newWishlistHandler(service)
-	router.Get("/api/v1/wishlist/items", handler.list)
-	router.Post("/api/v1/wishlist/items", handler.create)
-	router.Put("/api/v1/wishlist/items/order", handler.reorder)
-	router.Patch("/api/v1/wishlist/items/{id}", handler.update)
-	router.Delete("/api/v1/wishlist/items/{id}", handler.delete)
+	router.Group(func(r chi.Router) {
+		r.Use(auth.require)
+		r.Get("/api/v1/wishlist/items", handler.list)
+		r.Post("/api/v1/wishlist/items", handler.create)
+		r.Put("/api/v1/wishlist/items/order", handler.reorder)
+		r.Patch("/api/v1/wishlist/items/{id}", handler.update)
+		r.Delete("/api/v1/wishlist/items/{id}", handler.delete)
+	})
 	return router
 }
 
