@@ -18,6 +18,10 @@ services:
       PORT: "8080"
       DATABASE_PATH: /data/personal.db
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      OWNER_EMAIL: ${OWNER_EMAIL:-}
     ports:
       - "127.0.0.1:${HOST_PORT:-49173}:8080"
     volumes:

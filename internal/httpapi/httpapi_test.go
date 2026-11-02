@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/YosuaChrialMartono/personal-be/internal/database"
 	"github.com/YosuaChrialMartono/personal-be/internal/database/migrations"
@@ -35,8 +36,15 @@ func newTestServer(t *testing.T) testServer {
 		t.Fatalf("open database: %v", err)
 	}
 	repository := wishlist.NewSQLiteRepository(db)
-	handler := NewRouter(db, wishlist.NewService(repository), slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"http://localhost:3000"})
-	server := httptest.NewServer(handler)
+	auth := &Auth{sessions: map[string]time.Time{"test-session": time.Now().Add(time.Hour)}, transactions: map[string]transaction{}, origin: "http://localhost:3000", now: time.Now}
+	handler := NewRouter(db, wishlist.NewService(repository), slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"http://localhost:3000"}, auth)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.AddCookie(&http.Cookie{Name: sessionCookie, Value: "test-session"})
+		if r.Header.Get("Origin") == "" {
+			r.Header.Set("Origin", "http://localhost:3000")
+		}
+		handler.ServeHTTP(w, r)
+	}))
 	t.Cleanup(func() {
 		server.Close()
 		_ = db.Close()
